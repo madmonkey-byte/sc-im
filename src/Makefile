@@ -1,167 +1,147 @@
-# Specify the name of the resulting executable file
-name = sc-im
+# Makefile $Revision: 0.1.1
 
-# The base directory where everything should be installed.
-prefix  = /usr/local
 
-EXDIR   = $(prefix)/bin
-HELPDIR = $(prefix)/share/$(name)
-LIBDIR  = $(prefix)/share/doc/$(name)
+# Specify the name of the program.
+# All documentation and installation keys on this value.
+# 
+name=sc-im
+NAME=SC-IM
+SNAME := -DSNAME=\"$(name)\"
+
+# Compiler
+CC=gcc
+
+# The base directory where everything should be installed.  If you're
+# packaging this with an O/S, for example, you'll probably want to change
+# this to /usr.  Otherwise, /usr/local is probably more appropriate, unless
+# you're replacing the vendor-supplied version.
+prefix=/usr/local/stow/sc-im
+
+# This is where the install step puts it.
+EXDIR=$(prefix)/bin
+
+# Help dir
+HELPDIR := $(prefix)/share/$(name)
+HELP_PATH := -DHELP_PATH=\"$(HELPDIR)\"
 
 # This is where the man page goes.
-MANDIR  = $(prefix)/share/man/man1
+MANDIR=$(prefix)/man/man1
+MANEXT=1
+MANMODE=644
 
-# This is where the history file go
-HISTORY_DIR= .cache
-# This is where the config file go
-CONFIG_DIR= .config
+# This is where the library file (tutorial) goes.
+#LIBDIR=/usr/local/share/$(name) # reno
+LIBDIR=$(prefix)/share/doc/$(name)
+LIBRARY=-DLIBDIR=\"$(LIBDIR)\"
 
-# Change these to your liking or use `make CC=gcc` etc
-#CC   = cc
-#YACC = bison -y
-#SED  = sed
+# For Building SC-IM in LINUX, set LINUX variable below
+LINUX := -DLINUX
+#LINUX :=
 
-LDLIBS += -lm
+# For Building SC-IM in FREEBSD, set FREEBSD variable below
+#FREEBSD := -DFREEBSD
+FREEBSD :=
 
-CFLAGS += -Wall -g
-CFLAGS += -DNCURSES
-CFLAGS += -D_XOPEN_SOURCE_EXTENDED -D_GNU_SOURCE
-CFLAGS += -DSNAME=\"$(name)\"
-CFLAGS += -DHELP_PATH=\"$(HELPDIR)\"
-CFLAGS += -DLIBDIR=\"$(LIBDIR)\"
+# For Building SC-IM in NETBSD, set NETBSD variable below
+#NETBSD := -DNETBSD
+NETBSD :=
 
-# Sets default pager, e.g. 'less' or 'more'
-CFLAGS += -DDFLT_PAGER=\"less\"
-# Sets default editor. Its use in case EDITOR env variable is not set
-CFLAGS += -DDFLT_EDITOR=\"vim\"
-# Comment out to disable color support
-CFLAGS += -DUSECOLORS
-# Command history file, relative to HISTORY_DIR directory. Comment out to disable commandline history
-CFLAGS += -DHISTORY_FILE=\"sc-iminfo\" -DHISTORY_DIR=\"$(HISTORY_DIR)\"
-# Configuration file, relative to CONFIG_DIR directory
-CFLAGS += -DCONFIG_FILE=\"scimrc\" -DCONFIG_DIR=\"$(CONFIG_DIR)\"
-# Input mode history. Same as previous, but for insert mode commands
-CFLAGS += -DINS_HISTORY_FILE=\"sc-iminfo\"
-# Comment out to disable undo/redo support
-CFLAGS += -DUNDO
-# Maximum number of rows in spreadsheet. Up to 1048576
-CFLAGS += -DMAXROWS=65536
-# Used for date formatting with C-d shortcut using you local d_fmt
-CFLAGS += -DUSELOCALE
+# Set SIMPLE for lex.c if you don't want arrow keys or lex.c blows up
+#SIMPLE := -DSIMPLE
 
-# Clipboard support is OS dependent.
-#
-# Choose one of the following commands for copying to different clipboards:
-# You can later change it at runtime.
-#to copy to tmux clipboard:
-CFLAGS += -DDEFAULT_COPY_TO_CLIPBOARD_CMD=\""tmux load-buffer"\"
-#to copy to X clipboard:
-#CFLAGS += -DDEFAULT_COPY_TO_CLIPBOARD_CMD=\""xclip -i -selection clipboard <"\"
-#to copy to OSX clipboard:
-#CFLAGS += -DDEFAULT_COPY_TO_CLIPBOARD_CMD=\""pbcopy <"\"
-#
-# Choose one of the proposed commands for pasting from different clipboards:
-# You can later change it at runtime.
-CFLAGS += -DDEFAULT_PASTE_FROM_CLIPBOARD_CMD=\""tmux show-buffer"\"
-#CFLAGS += -DDEFAULT_PASTE_FROM_CLIPBOARD_CMD=\""xclip -o -selection clipboard"\"
-#CFLAGS += -DDEFAULT_PASTE_FROM_CLIPBOARD_CMD=\""pbpaste"\"
+# Set USELOCALE to use your local d_fmt for converting dates with C-d shortcut.
+# See DATES INPUT in help.
+USELOCALE := -DUSELOCALE
 
-# Uncomment for basic XLS import. Requires libxlsreader
-#CFLAGS += -DXLS
-#LDLIBS += -lxlsreader
+# Set this if you want SC-IM to have color support
+USECOLORS := -DUSECOLORS
 
-# Autobackup. If you unset this, no backup check nor autobackup feature will be available.
-CFLAGS += -DAUTOBACKUP
-# Have threads? Set these two, if you want the autobackup feature to work with threads.
-CFLAGS += -DHAVE_PTHREAD
+# Set SIGVOID if signal routines are type void.
+# use: SIGVOID=-DSIGVOID for:
+# System 5.3, SunOS 4.X, VMS, BSD4.4 (reno), and ANSI C Compliant systems
+# use: SIGVOID= for:
+#  BSD systems (excluding reno, BSD4.4), and the UNIXPC 'cc'
+SIGVOID := -DSIGVOID
 
-ifneq ($(shell uname -s),Darwin)
-  LDLIBS += -pthread
-endif
+# Set IEEE_MATH if you need setsticky() calls in your signal handlers
+#IEEE_MATH := -DIEEE_MATH
 
-# NOTE: libxlsxwriter is required for xlsx file export support
-ifneq (,$(wildcard /usr/include/xlsxwriter.h))
-  CFLAGS += -DXLSX_EXPORT
-  LDLIBS += -lxlsxwriter
-endif
-ifneq (,$(wildcard /usr/local/include/xlsxwriter.h))
-  CFLAGS += -DXLSX_EXPORT
-  LDLIBS += -lxlsxwriter
-endif
+# The -ffloat-store compiler option is necessary for compiling interp.c to
+# prevent spurious "Still changing after x iterations" errors, intermittent
+# problems with the @round function, comparisons failing when they shouldn't,
+# and potentially other similar problems due to FPU registers having greater
+# precision than doubles in memory.  This is known to be necessary for GCC
+# on x86 processors/FPUs, and probably others.
+FLOAT_STORE := -ffloat-store
 
-# Check for gnuplot existance
-ifneq (, $(shell which gnuplot))
-  CFLAGS += -DGNUPLOT
-endif
+# Set RINT=-DRINT if you do not have rint() in math.h
+# Set RINT= on/with (they have rint):
+# SunOS 4.0.3c compiler
+# BSD4.4 (reno)
+#RINT := -DRINT
 
-# OpenBSD does not implement wordexp()
-ifeq ($(shell uname -s),OpenBSD)
-  CFLAGS += -DNO_WORDEXP
-endif
+# If your system supports POSIX.2 regular expressions, REGEX should be
+# set to -DREGCOMP.  Otherwise, set REGEX to -DREGCMP if you have the
+# regcmp/regex regular expression routines (most System V based systems
+# do) or to -DRE_COMP if you have the re_comp/re_exec regular expression
+# routines (most BSD based systems do).  If your system has no support for
+# regular expressions, leave REGEX unset.
+#REGEX := -DREGCMP
+#REGEX := -DRE_COMP
+REGEX := -DREGCOMP
 
-# dynamic linking (not available in BSD)
-ifneq ($(shell uname -s | grep -o BSD),BSD)
-  LDLIBS += -ldl
-endif
+# This is the name of a pager like "more".
+#DFLT_PAGER := -DDFLT_PAGER=\"more\"
+#DFLT_PAGER := -DDFLT_PAGER=\"less\"
+DFLT_PAGER := -DDFLT_PAGER=\"pager\"
 
-ifneq (, $(shell which pkg-config))
-  # Any system with pkg-config
+# This is the name of the history file that is looked in your HOME directory
+# If undefined, no history will be saved
+HISTORY_FILE := -DHISTORY_FILE=\".$(name)info\"
 
-  # NOTE: ncursesw (required)
-  ifeq ($(shell uname -s),Darwin)
-    # macOS' ncurses is built with wide-char support
-    LDFLAGS += -lncurses
-  else ifneq ($(shell pkg-config --exists ncursesw || echo 'no'),no)
-    CFLAGS += $(shell pkg-config --cflags ncursesw)
-    LDLIBS += $(shell pkg-config --libs ncursesw)
-  else ifneq ($(shell pkg-config --exists ncurses || echo 'no'),no)
-    # hopefully this includes wide character support then
-    CFLAGS += $(shell pkg-config --cflags ncurses)
-    LDLIBS += $(shell pkg-config --libs ncurses)
-  else
-    LDLIBS += -lncursesw
-  endif
+# If your system doesn't have notimeout() in curses, define NONOTIMEOUT
+#NO_NOTIMEOUT := -DNONOTIMEOUT
 
-  # NOTE: libxml and libzip are required for xlsx file import support
-  ifneq ($(shell pkg-config --exists libzip libxml-2.0 || echo 'no'),no)
-    CFLAGS += -DXLSX $(shell pkg-config --cflags libxml-2.0 libzip)
-    LDLIBS += $(shell pkg-config --libs libxml-2.0 libzip)
-  endif
+# MS-DOS (and perhaps Windows) needs y_tab instead of the normal y.tab
+#YTAB := y_tab
+YTAB := y.tab
 
-  # NOTE: lua support
-  ifneq ($(shell pkg-config --exists lua51 || echo 'no'),no)
-    CFLAGS += -DXLUA $(shell pkg-config --cflags lua51)
-    LDLIBS += $(shell pkg-config --libs lua51) -Wl,--export-dynamic
-  else ifneq ($(shell pkg-config --exists lua-5.1 || echo 'no'),no) # FreeBSD
-    CFLAGS += -DXLUA $(shell pkg-config --cflags lua-5.1)
-    ifneq ($(shell uname -s),Darwin)
-      LDLIBS += $(shell pkg-config --libs lua-5.1) -Wl,--export-dynamic
-    else
-      LDLIBS += $(shell pkg-config --libs lua-5.1) -rdynamic
-    endif
-  endif
-else ifeq ($(shell uname -s),Darwin)
-  # macOS without pkg-config
+YACC := bison -y
+SED := sed
 
-  # macOS' ncurses is built with wide-char support
-  LDFLAGS += -lncurses
-else ifeq ($(shell uname -s),NetBSD)
-  # NetBSD without pkg-config
+# Uncomment below if you want basic XLS import support.
+# Requires libxlsreader.
+# Add -lxlsreader in LDLIBS as well.
+XLS := 
+#XLS := -DXLS
 
-  CFLAGS  += -I/usr/pkg/include
-  CFLAGS  += -I/usr/pkg/include/ncursesw
+# Uncomment below if you want basic XLSX import support.
+# Requires libzip-dev and libxml2-dev
+# Add -lzip -xml2 to LDLIBS as well.
+# and -I/usr/include/libxml2 or the acording path to the libxml headers, in CFLAGS
+#XLSX :=
+XLSX := -DXLSX
 
-  LDFLAGS += -L/usr/pkg/lib
-  LDFLAGS += -Wl,-R/usr/pkg/lib
+# Set UNDO variable to enable this feature
+#UNDO :=
+UNDO := -DUNDO
 
-  LDLIBS += -lncursesw
-else
-  LDFLAGS += -lncursesw
-endif
+#CFLAGS := -O2 -Wall -pipe -g
+CFLAGS := $(LINUX) $(FREEBSD) $(NETBSD) -O2 -Wall -pipe -g -I/usr/include/libxml2
+CFLAGS := $(CFLAGS) $(USECOLORS) $(USELOCALE) $(UNDO) $(SIGVOID) $(DFLT_PAGER)
+CFLAGS := $(CFLAGS) $(IEEE_MATH) $(RINT) $(REGEX) $(LIBRARY)
+CFLAGS := $(CFLAGS) $(HELP_PATH) $(SNAME) $(NO_NOTIMEOUT) $(SIMPLE) $(XLS) $(XLSX) $(HISTORY_FILE)
 
-OBJS = $(patsubst %.c, %.o, $(wildcard *.c) $(wildcard utils/*.c)) gram.o
+LDLIBS := -lm -lncursesw -lzip -lxml2
+#LDLIBS := -lm -lncurses -lxlsreader
+#LDLIBS := -lm -lncurses -lxlsreader -lzip -lxml2 
 
-.PHONY : all clean install docs man_install man_uninstall
+OBJS := $(patsubst %.c, %.o, $(wildcard *.c) $(wildcard utils/*.c)) gram.o
+
+# The documents in the Archive
+#DOCS := README torev
+
+.PHONY : all clean install
 
 all : $(name)
 
@@ -169,58 +149,41 @@ install :
 	install -d $(DESTDIR)$(prefix)/bin
 	install $(name) $(DESTDIR)$(prefix)/bin/$(name)
 	install -d $(DESTDIR)$(HELPDIR)
-	install -m 644 doc $(DESTDIR)$(HELPDIR)/$(name)_help
-	install -m 644 plot_* $(DESTDIR)$(HELPDIR)/
-	install -d $(DESTDIR)$(MANDIR)/
-	install -m 644 sc-im.1 $(DESTDIR)$(MANDIR)/$(name).1
+	install doc $(DESTDIR)$(HELPDIR)/$(name)_help
+
 
 uninstall :
 	-rm $(DESTDIR)$(prefix)/bin/$(name)
 	-rm $(DESTDIR)$(HELPDIR)/$(name)_help
-	-rm $(DESTDIR)$(HELPDIR)/plot*
-	-rm $(DESTDIR)$(MANDIR)/$(name).1
 
 $(name) : $(OBJS)
-	$(CC) $(LDFLAGS) $^ -o $@ $(LDLIBS)
+	$(CC) $(LDFLAGS) $^ -o $@ $(LDLIBS) 
 
 $(name)qref: sc.h
-	$(CC) $(CFLAGS) $(LDFLAGS) -DQREF $(QREF_FMT) -DSCNAME=\"$(name)\" -o $(name)qref help.c $(LDLIBS)
+	$(CC) $(CFLAGS) $(LDFLAGS) -DQREF $(QREF_FMT) -DSCNAME=\"$(NAME)\" -o $(name)qref help.c $(LDLIBS)
 
-$(OBJS) : y.tab.h experres.h statres.h
+$(OBJS) : $(YTAB).h experres.h statres.h
 
-.INTERMEDIATE: y.tab.c
-y.tab.c	: gram.y
+$(YTAB).h : gram.y
+
+gram.c $(YTAB).h : gram.y
 	$(YACC) -d $<
-
-gram.c : y.tab.c
-	mv $< $@
-
-y.tab.h : gram.y | gram.c
-
-experres.h : gram.y eres.sed
-	sed -f eres.sed < $< > $@
-
-statres.h : gram.y sres.sed
-	sed -f sres.sed < $< > $@
+	test -f $(YTAB).c && mv $(YTAB).c gram.c
 
 pvmtbl.o: sc.h pvmtbl.c
 	$(CC) ${CFLAGS} -c -DPSC pvmtbl.c
 
-docs:
-	doxygen Doxyfile
+experres.h : gram.y
+	sed -f eres.sed < gram.y > experres.h
 
-man_install:
-	@cp -r ../docs/man/man3/ /usr/local/share/man/
-	mandb
+statres.h : gram.y
+	sed -f sres.sed < gram.y > statres.h
 
-# "sc-im" MUST match what is in Doxyfile `MAN_EXTENSION = .sc-im.3`
-man_uninstall:
-	@rm -rf /usr/local/share/man/man3/*sc-im.3
-	@mandb
+interp.o : interp.c
+	$(CC) $(CFLAGS) $(FLOAT_STORE) -c $< -o $@
 
 clean:
 	rm -f $(OBJS)
-	rm -f experres.h statres.h y.tab.h
-	rm -f core gram.c y.output pxmalloc.c pvmtbl.c tags $(name)qref
+	rm -f *res.h $(YTAB).h
+	rm -f debug core gram.c y.output pxmalloc.c pvmtbl.c tags $(name)qref
 	rm -f qhelp.c $(name)
-	rm -rf ../docs/ 
